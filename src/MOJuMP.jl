@@ -2,7 +2,8 @@ module MOJuMP
 
 export tradeoff_table, eff_pareto
 
-import JuMP, Sobol
+import JuMP
+using Sobol
 import Combinatorics: permutations
 import Base.Iterators: partition
 
@@ -98,6 +99,8 @@ function eff_pareto(m::JuMP.Model, OBJs::Vector{JuMP.VariableRef},
     
     # Always minimizing with respect to first objective. Set other objectives as epsilon constraints
     JuMP.@objective(m, Min, OBJs[1])
+    toSkipN = 2^floor(Int, 1:(samples-samples÷N) |> length |> log2)
+    skip(s, toSkipN)
     for i = 1:(samples - samples÷N)
         ϵ[i, :] .= Sobol.next!(s)
         JuMP.set_upper_bound.(OBJs[2:end], ϵ[i, :])
@@ -117,6 +120,8 @@ function eff_pareto(m::JuMP.Model, OBJs::Vector{JuMP.VariableRef},
     s = Sobol.SobolSeq(minimum(tOffTab[:, 2:end]; dims = 1),
         maximum(tOffTab[:, 2:end]; dims = 1))
     JuMP.@objective(m, Min, rOBJs[1])
+    toSkipN = 2^floor(Int, (samples-samples÷N+1):samples |> length |> log2)
+    skip(s, toSkipN)
     for i = (samples - samples÷N + 1):samples
         ϵ[i, :] .= Sobol.next!(s)
         JuMP.set_upper_bound.(rOBJs[2:end], ϵ[i, :])
